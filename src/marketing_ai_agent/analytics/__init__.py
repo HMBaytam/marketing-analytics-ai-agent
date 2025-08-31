@@ -1,25 +1,25 @@
 """Advanced analytics and scoring engines for marketing performance analysis."""
 
-from .performance_scorer import PerformanceScorer, ScoringConfig, PerformanceScore
-from .trend_analyzer import TrendAnalyzer, TrendConfig, TrendAnalysis
-from .anomaly_detector import AnomalyDetector, AnomalyConfig, AnomalyResult
-from .benchmarking import BenchmarkingEngine, BenchmarkConfig, BenchmarkResult
-from .predictive_model import PredictiveModel, PredictionConfig, PredictionResult
+from .anomaly_detector import AnomalyConfig, AnomalyDetector, AnomalyResult
+from .benchmarking import BenchmarkConfig, BenchmarkingEngine, BenchmarkResult
+from .performance_scorer import PerformanceScore, PerformanceScorer, ScoringConfig
+from .predictive_model import PredictionConfig, PredictionResult, PredictiveModel
+from .trend_analyzer import TrendAnalysis, TrendAnalyzer, TrendConfig
 
 __all__ = [
     "PerformanceScorer",
-    "ScoringConfig", 
+    "ScoringConfig",
     "PerformanceScore",
     "TrendAnalyzer",
     "TrendConfig",
     "TrendAnalysis",
     "AnomalyDetector",
-    "AnomalyConfig", 
+    "AnomalyConfig",
     "AnomalyResult",
     "BenchmarkingEngine",
     "BenchmarkConfig",
     "BenchmarkResult",
     "PredictiveModel",
     "PredictionConfig",
-    "PredictionResult"
+    "PredictionResult",
 ]

@@ -2,7 +2,9 @@
 
 __author__ = "AI Agent"
 __email__ = "ai@agent.com"
-__description__ = "AI-powered marketing analytics agent for campaign optimization and insights"
+__description__ = (
+    "AI-powered marketing analytics agent for campaign optimization and insights"
+)
 
 from .version import __version__
 
