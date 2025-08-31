@@ -24,15 +24,15 @@ def generate(
     template: str = typer.Option(
         "executive", "--template", "-t", help="Report template to use"
     ),
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to report on"
     ),
     date_range: str = typer.Option(
         "30d", "--date-range", "-d", help="Date range for report"
     ),
-    output_file: Path | None = typer.Option(
-        None, "--output", "-o", help="Output file path"
-    ),
+    output_file: Path
+    | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option(
         "markdown", "--format", "-f", help="Output format (markdown, html, pdf, json)"
     ),
@@ -47,9 +47,8 @@ def generate(
     auto_send: bool = typer.Option(
         False, "--auto-send", help="Automatically send report via email"
     ),
-    recipients: list[str] | None = typer.Option(
-        None, "--recipient", help="Email recipients for auto-send"
-    ),
+    recipients: list[str]
+    | None = typer.Option(None, "--recipient", help="Email recipients for auto-send"),
     interactive_preview: bool = typer.Option(
         False, "--preview", "-p", help="Show interactive preview"
     ),
@@ -163,15 +162,13 @@ def templates(
     list_all: bool = typer.Option(
         False, "--list", "-l", help="List all available templates"
     ),
-    describe: str | None = typer.Option(
-        None, "--describe", "-d", help="Describe specific template"
-    ),
+    describe: str
+    | None = typer.Option(None, "--describe", "-d", help="Describe specific template"),
     create_custom: bool = typer.Option(
         False, "--create-custom", help="Create custom template"
     ),
-    template_dir: Path | None = typer.Option(
-        None, "--template-dir", help="Custom template directory"
-    ),
+    template_dir: Path
+    | None = typer.Option(None, "--template-dir", help="Custom template directory"),
 ):
     """
     Manage report templates and layouts.
@@ -204,10 +201,10 @@ def schedule(
         ..., "--recipient", "-r", help="Email recipients"
     ),
     time: str = typer.Option("09:00", "--time", help="Time to send (HH:MM format)"),
-    day_of_week: str | None = typer.Option(
-        None, "--day", help="Day of week (for weekly reports)"
-    ),
-    day_of_month: int | None = typer.Option(
+    day_of_week: str
+    | None = typer.Option(None, "--day", help="Day of week (for weekly reports)"),
+    day_of_month: int
+    | None = typer.Option(
         None, "--day-of-month", help="Day of month (for monthly reports)"
     ),
     active: bool = typer.Option(True, "--active/--inactive", help="Schedule is active"),
@@ -258,12 +255,10 @@ def schedule(
 @app.command()
 def dashboards(
     action: str = typer.Argument(..., help="Action: list, create, view, or delete"),
-    dashboard_name: str | None = typer.Option(
-        None, "--name", "-n", help="Dashboard name"
-    ),
-    template: str | None = typer.Option(
-        None, "--template", help="Base template for new dashboard"
-    ),
+    dashboard_name: str
+    | None = typer.Option(None, "--name", "-n", help="Dashboard name"),
+    template: str
+    | None = typer.Option(None, "--template", help="Base template for new dashboard"),
     auto_refresh: bool = typer.Option(
         True, "--auto-refresh/--no-refresh", help="Enable auto-refresh"
     ),
@@ -316,18 +311,15 @@ def export(
     target_format: str = typer.Option(
         ..., "--format", "-f", help="Target format (pdf, html, docx, pptx)"
     ),
-    output_file: Path | None = typer.Option(
-        None, "--output", "-o", help="Output file path"
-    ),
-    template_style: str | None = typer.Option(
-        None, "--style", help="Styling template to apply"
-    ),
+    output_file: Path
+    | None = typer.Option(None, "--output", "-o", help="Output file path"),
+    template_style: str
+    | None = typer.Option(None, "--style", help="Styling template to apply"),
     include_cover: bool = typer.Option(
         True, "--cover/--no-cover", help="Include cover page"
     ),
-    watermark: str | None = typer.Option(
-        None, "--watermark", help="Add watermark text"
-    ),
+    watermark: str
+    | None = typer.Option(None, "--watermark", help="Add watermark text"),
 ):
     """
     Export reports to different formats with styling.
@@ -391,9 +383,8 @@ def analytics(
     show_performance: bool = typer.Option(
         True, "--performance/--no-performance", help="Show performance metrics"
     ),
-    benchmark_against: str | None = typer.Option(
-        None, "--benchmark", help="Benchmark against industry/peer"
-    ),
+    benchmark_against: str
+    | None = typer.Option(None, "--benchmark", help="Benchmark against industry/peer"),
     export_analytics: bool = typer.Option(
         False, "--export", help="Export analytics data"
     ),
@@ -1290,9 +1281,7 @@ def _convert_to_html(content: dict, output_file: Path, style: str | None):
         f.write(html_template)
 
 
-def _convert_to_docx(
-    content: dict, output_file: Path, style: str | None, cover: bool
-):
+def _convert_to_docx(content: dict, output_file: Path, style: str | None, cover: bool):
     """Convert content to DOCX."""
     rprint("📄 DOCX conversion requires python-docx library")
     rprint("Content would be converted to Word document format")

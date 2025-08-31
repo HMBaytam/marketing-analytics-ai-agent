@@ -355,9 +355,7 @@ class BenchmarkingEngine:
 
         return peer_stats
 
-    def _extract_campaign_metrics(
-        self, campaign: Campaign
-    ) -> dict[str, float | None]:
+    def _extract_campaign_metrics(self, campaign: Campaign) -> dict[str, float | None]:
         """Extract comparable metrics from campaign."""
         metrics = {
             "impressions": float(campaign.impressions)

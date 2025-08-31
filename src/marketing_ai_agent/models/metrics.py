@@ -160,9 +160,7 @@ class AggregatedMetrics(BaseModel):
     total_cost_micros: int = Field(0, description="Total cost in micros")
 
     # Computed aggregates
-    average_ctr: float | None = Field(
-        None, description="Average CTR across entities"
-    )
+    average_ctr: float | None = Field(None, description="Average CTR across entities")
     average_conversion_rate: float | None = Field(
         None, description="Average conversion rate"
     )

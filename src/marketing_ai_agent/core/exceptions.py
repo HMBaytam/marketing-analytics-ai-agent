@@ -178,9 +178,7 @@ class RateLimitError(RetryableError):
 class TemporaryServiceError(RetryableError):
     """Raised when a service is temporarily unavailable."""
 
-    def __init__(
-        self, message: str, service_name: str, retry_after: int | None = None
-    ):
+    def __init__(self, message: str, service_name: str, retry_after: int | None = None):
         super().__init__(message, retry_after)
         self.error_code = "TEMPORARY_SERVICE_ERROR"
         self.context.update({"service_name": service_name})

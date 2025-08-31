@@ -31,15 +31,15 @@ console = Console()
 
 @app.command()
 def score(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to score"
     ),
     date_range: str = typer.Option(
         "30d", "--date-range", "-d", help="Date range for analysis"
     ),
-    output_file: Path | None = typer.Option(
-        None, "--output", "-o", help="Save results to file"
-    ),
+    output_file: Path
+    | None = typer.Option(None, "--output", "-o", help="Save results to file"),
     include_breakdown: bool = typer.Option(
         True, "--breakdown/--no-breakdown", help="Include score breakdown"
     ),
@@ -142,7 +142,8 @@ def score(
 
 @app.command()
 def trends(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to analyze"
     ),
     metric: str = typer.Option(
@@ -240,7 +241,8 @@ def trends(
 
 @app.command()
 def anomalies(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to analyze"
     ),
     date_range: str = typer.Option(
@@ -360,15 +362,14 @@ def anomalies(
 
 @app.command()
 def benchmark(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to benchmark"
     ),
-    industry: str | None = typer.Option(
-        None, "--industry", help="Industry for benchmarking"
-    ),
-    peer_group: str | None = typer.Option(
-        None, "--peer-group", help="Peer group for comparison"
-    ),
+    industry: str
+    | None = typer.Option(None, "--industry", help="Industry for benchmarking"),
+    peer_group: str
+    | None = typer.Option(None, "--peer-group", help="Peer group for comparison"),
     metrics: list[str] = typer.Option(
         ["roas", "ctr", "cpa"], "--metric", help="Metrics to benchmark"
     ),
@@ -464,7 +465,8 @@ def benchmark(
 
 @app.command()
 def predict(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to predict"
     ),
     metric: str = typer.Option(
@@ -576,7 +578,8 @@ def predict(
 
 @app.command()
 def dashboard(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Focus on specific campaign"
     ),
     refresh_interval: int = typer.Option(

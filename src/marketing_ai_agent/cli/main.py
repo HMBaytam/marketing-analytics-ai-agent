@@ -35,13 +35,13 @@ config_state = {"config": None}
 @app.callback()
 @handle_errors(reraise=True, report=True, severity="CRITICAL")
 def main(
-    config_file: Path | None = typer.Option(
-        None, "--config", "-c", help="Path to configuration file"
-    ),
+    config_file: Path
+    | None = typer.Option(None, "--config", "-c", help="Path to configuration file"),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
-    output_dir: Path | None = typer.Option(
+    output_dir: Path
+    | None = typer.Option(
         None, "--output-dir", "-o", help="Output directory for reports and exports"
     ),
     monitor: bool = typer.Option(False, "--monitor", help="Enable system monitoring"),
@@ -135,9 +135,8 @@ def monitor(
     health_interval: int = typer.Option(
         300, "--health-interval", help="Health check interval (seconds)"
     ),
-    export_metrics: Path | None = typer.Option(
-        None, "--export-metrics", help="Export metrics to file"
-    ),
+    export_metrics: Path
+    | None = typer.Option(None, "--export-metrics", help="Export metrics to file"),
 ):
     """Manage system monitoring."""
 
@@ -220,9 +219,8 @@ def errors(
     show_summary: bool = typer.Option(
         False, "--summary", "-s", help="Show error summary"
     ),
-    export: Path | None = typer.Option(
-        None, "--export", help="Export error report to file"
-    ),
+    export: Path
+    | None = typer.Option(None, "--export", help="Export error report to file"),
 ):
     """Manage and view error reports."""
 
@@ -435,9 +433,8 @@ def status(
     detailed: bool = typer.Option(
         False, "--detailed", "-d", help="Show detailed system information"
     ),
-    export: Path | None = typer.Option(
-        None, "--export", help="Export status report to file"
-    ),
+    export: Path
+    | None = typer.Option(None, "--export", help="Export status report to file"),
 ):
     """Show comprehensive system status and health checks."""
 

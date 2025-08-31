@@ -63,9 +63,7 @@ class TrafficData(BaseModel):
 
     # Dimensions
     country: str | None = Field(None, description="Country")
-    device_category: DeviceCategory | None = Field(
-        None, description="Device category"
-    )
+    device_category: DeviceCategory | None = Field(None, description="Device category")
     channel_grouping: ChannelGrouping | None = Field(
         None, description="Default channel grouping"
     )
@@ -84,9 +82,7 @@ class TrafficData(BaseModel):
     )
 
     # Engagement metrics
-    engaged_sessions: int | None = Field(
-        None, description="Number of engaged sessions"
-    )
+    engaged_sessions: int | None = Field(None, description="Number of engaged sessions")
     engagement_rate: float | None = Field(None, description="Engagement rate (0-1)")
     events_per_session: float | None = Field(
         None, description="Average events per session"
@@ -123,9 +119,7 @@ class ConversionEvent(BaseModel):
     medium: str | None = Field(None, description="Traffic medium")
     campaign_name: str | None = Field(None, description="Campaign name")
     country: str | None = Field(None, description="Country")
-    device_category: DeviceCategory | None = Field(
-        None, description="Device category"
-    )
+    device_category: DeviceCategory | None = Field(None, description="Device category")
 
     # Conversion metrics
     conversions: float = Field(0.0, description="Number of conversions")
@@ -139,12 +133,8 @@ class ConversionEvent(BaseModel):
     conversion_value: Decimal | None = Field(
         None, description="Average conversion value"
     )
-    items_purchased: int | None = Field(
-        None, description="Number of items purchased"
-    )
-    transaction_id: str | None = Field(
-        None, description="Transaction ID for purchases"
-    )
+    items_purchased: int | None = Field(None, description="Number of items purchased")
+    transaction_id: str | None = Field(None, description="Transaction ID for purchases")
 
     @property
     def average_order_value(self) -> Decimal | None:
@@ -219,9 +209,7 @@ class AudienceSegment(BaseModel):
     gender: str | None = Field(None, description="Gender")
     country: str | None = Field(None, description="Country")
     city: str | None = Field(None, description="City")
-    device_category: DeviceCategory | None = Field(
-        None, description="Device category"
-    )
+    device_category: DeviceCategory | None = Field(None, description="Device category")
 
     # Behavior metrics
     users: int = Field(0, description="Users in segment")
@@ -276,9 +264,7 @@ class AttributionData(BaseModel):
 
     # Summary metrics
     total_conversions: float = Field(0.0, description="Total conversions attributed")
-    total_revenue: Decimal | None = Field(
-        None, description="Total revenue attributed"
-    )
+    total_revenue: Decimal | None = Field(None, description="Total revenue attributed")
     unique_paths: int = Field(0, description="Number of unique conversion paths")
     average_path_length: float | None = Field(
         None, description="Average path length to conversion"
@@ -337,9 +323,7 @@ class EcommerceData(BaseModel):
     # User info
     user_id: str | None = Field(None, description="User ID")
     session_id: str | None = Field(None, description="Session ID")
-    device_category: DeviceCategory | None = Field(
-        None, description="Device category"
-    )
+    device_category: DeviceCategory | None = Field(None, description="Device category")
 
     @property
     def item_count(self) -> int:

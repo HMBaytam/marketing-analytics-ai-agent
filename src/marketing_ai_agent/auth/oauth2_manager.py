@@ -110,9 +110,7 @@ class OAuth2Manager(ABC):
             logger.error(f"Failed to store credentials: {e}")
             raise
 
-    def load_credentials(
-        self, account_id: str = "default"
-    ) -> OAuth2Credentials | None:
+    def load_credentials(self, account_id: str = "default") -> OAuth2Credentials | None:
         """
         Load credentials from secure storage.
 
@@ -211,9 +209,7 @@ class OAuth2Manager(ABC):
             logger.error(f"Unexpected error refreshing credentials: {e}")
             return False
 
-    def get_valid_credentials(
-        self, account_id: str = "default"
-    ) -> Credentials | None:
+    def get_valid_credentials(self, account_id: str = "default") -> Credentials | None:
         """
         Get valid credentials, refreshing if necessary.
 

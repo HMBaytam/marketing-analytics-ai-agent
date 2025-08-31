@@ -17,12 +17,8 @@ class GoogleAdsConfig(BaseModel):
     developer_token: str = Field(..., description="Google Ads API developer token")
     client_id: str = Field(..., description="OAuth2 client ID")
     client_secret: str = Field(..., description="OAuth2 client secret")
-    refresh_token: str | None = Field(
-        default=None, description="OAuth2 refresh token"
-    )
-    customer_id: str | None = Field(
-        default=None, description="Google Ads customer ID"
-    )
+    refresh_token: str | None = Field(default=None, description="OAuth2 refresh token")
+    customer_id: str | None = Field(default=None, description="Google Ads customer ID")
     login_customer_id: str | None = Field(
         default=None, description="Manager account customer ID"
     )
@@ -34,12 +30,8 @@ class GoogleAnalyticsConfig(BaseModel):
 
     property_id: str = Field(..., description="GA4 property ID")
     client_id: str | None = Field(default=None, description="OAuth2 client ID")
-    client_secret: str | None = Field(
-        default=None, description="OAuth2 client secret"
-    )
-    refresh_token: str | None = Field(
-        default=None, description="OAuth2 refresh token"
-    )
+    client_secret: str | None = Field(default=None, description="OAuth2 client secret")
+    refresh_token: str | None = Field(default=None, description="OAuth2 refresh token")
     credentials_path: str | None = Field(
         default=None, description="Path to service account credentials"
     )

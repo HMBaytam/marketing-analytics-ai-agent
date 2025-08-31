@@ -157,9 +157,7 @@ class GA4APIClient:
             logger.error(f"Failed to authenticate Google Analytics API: {e}")
             return False
 
-    def get_client(
-        self, account_id: str = "default"
-    ) -> BetaAnalyticsDataClient | None:
+    def get_client(self, account_id: str = "default") -> BetaAnalyticsDataClient | None:
         """
         Get authenticated Google Analytics client.
 

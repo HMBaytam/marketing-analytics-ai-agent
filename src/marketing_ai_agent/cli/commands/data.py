@@ -26,18 +26,17 @@ def export(
         "-d",
         help="Date range (7d, 30d, 90d, or YYYY-MM-DD,YYYY-MM-DD)",
     ),
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign ID to export"
     ),
-    output_file: Path | None = typer.Option(
-        None, "--output", "-o", help="Output file path"
-    ),
+    output_file: Path
+    | None = typer.Option(None, "--output", "-o", help="Output file path"),
     format: str = typer.Option(
         "csv", "--format", "-f", help="Output format (csv, json, xlsx)"
     ),
-    metrics: list[str] | None = typer.Option(
-        None, "--metrics", "-m", help="Specific metrics to export"
-    ),
+    metrics: list[str]
+    | None = typer.Option(None, "--metrics", "-m", help="Specific metrics to export"),
     include_segments: bool = typer.Option(
         False, "--include-segments", help="Include audience segments"
     ),
@@ -116,9 +115,8 @@ def export(
 @app.command()
 def list_campaigns(
     source: str = typer.Argument("all", help="Data source (ga4, google-ads, all)"),
-    status: str | None = typer.Option(
-        None, "--status", help="Filter by campaign status"
-    ),
+    status: str
+    | None = typer.Option(None, "--status", help="Filter by campaign status"),
     limit: int = typer.Option(50, "--limit", "-n", help="Maximum campaigns to show"),
 ):
     """
@@ -282,9 +280,8 @@ def validate_sources(
 @app.command()
 def schema(
     source: str = typer.Argument(..., help="Data source (ga4, google-ads)"),
-    table: str | None = typer.Option(
-        None, "--table", help="Specific table/report to describe"
-    ),
+    table: str
+    | None = typer.Option(None, "--table", help="Specific table/report to describe"),
     output_format: str = typer.Option(
         "table", "--format", help="Output format (table, json, yaml)"
     ),
@@ -318,12 +315,12 @@ def sync(
     incremental: bool = typer.Option(
         True, "--incremental/--full", help="Incremental or full sync"
     ),
-    schedule: str | None = typer.Option(
+    schedule: str
+    | None = typer.Option(
         None, "--schedule", help="Schedule sync (hourly, daily, weekly)"
     ),
-    output_dir: Path | None = typer.Option(
-        None, "--output-dir", help="Directory for synced data"
-    ),
+    output_dir: Path
+    | None = typer.Option(None, "--output-dir", help="Directory for synced data"),
 ):
     """
     Setup automated data synchronization.

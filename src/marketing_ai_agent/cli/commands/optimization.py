@@ -32,7 +32,8 @@ console = Console()
 
 @app.command()
 def recommendations(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to optimize"
     ),
     max_recommendations: int = typer.Option(
@@ -41,15 +42,14 @@ def recommendations(
     confidence_threshold: float = typer.Option(
         0.7, "--confidence", help="Minimum confidence threshold"
     ),
-    priority_filter: str | None = typer.Option(
+    priority_filter: str
+    | None = typer.Option(
         None, "--priority", help="Filter by priority (critical, high, medium, low)"
     ),
-    category_filter: str | None = typer.Option(
-        None, "--category", help="Filter by category"
-    ),
-    output_file: Path | None = typer.Option(
-        None, "--output", "-o", help="Save recommendations to file"
-    ),
+    category_filter: str
+    | None = typer.Option(None, "--category", help="Filter by category"),
+    output_file: Path
+    | None = typer.Option(None, "--output", "-o", help="Save recommendations to file"),
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Interactive recommendation review"
     ),
@@ -166,9 +166,8 @@ def budget(
     max_change: float = typer.Option(
         0.3, "--max-change", help="Maximum change percentage"
     ),
-    channels: list[str] | None = typer.Option(
-        None, "--channel", help="Specific channels to include"
-    ),
+    channels: list[str]
+    | None = typer.Option(None, "--channel", help="Specific channels to include"),
     preview_only: bool = typer.Option(
         False, "--preview", help="Preview changes without applying"
     ),
@@ -258,7 +257,8 @@ def budget(
 
 @app.command()
 def roi(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Specific campaign to analyze"
     ),
     objective: str = typer.Option(
@@ -369,12 +369,12 @@ def roi(
 
 @app.command()
 def ab_tests(
-    campaign_id: str | None = typer.Option(
+    campaign_id: str
+    | None = typer.Option(
         None, "--campaign-id", "-c", help="Campaign to generate tests for"
     ),
-    test_type: str | None = typer.Option(
-        None, "--type", "-t", help="Specific test type to focus on"
-    ),
+    test_type: str
+    | None = typer.Option(None, "--type", "-t", help="Specific test type to focus on"),
     min_sample_size: int = typer.Option(
         1000, "--min-samples", help="Minimum sample size for tests"
     ),
@@ -582,7 +582,8 @@ def simulate(
 
 @app.command()
 def monitor(
-    optimization_id: str | None = typer.Option(
+    optimization_id: str
+    | None = typer.Option(
         None, "--optimization-id", help="Specific optimization to monitor"
     ),
     real_time: bool = typer.Option(

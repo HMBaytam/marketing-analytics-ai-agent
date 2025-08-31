@@ -86,9 +86,7 @@ class Campaign(BaseModel):
     )
     start_date: Date | None = Field(None, description="Campaign start date")
     end_date: Date | None = Field(None, description="Campaign end date")
-    budget_amount_micros: int | None = Field(
-        None, description="Daily budget in micros"
-    )
+    budget_amount_micros: int | None = Field(None, description="Daily budget in micros")
     target_cpa_micros: int | None = Field(None, description="Target CPA in micros")
     target_roas: float | None = Field(None, description="Target ROAS")
     customer_id: str = Field(..., description="Customer account ID")
