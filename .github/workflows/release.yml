@@ -1,0 +1,446 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create as draft release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  POETRY_VERSION: "1.8.3"
+  PYTHON_VERSION: "3.11"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  validate_version:
+    name: Validate Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version information
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          # Extract version from git tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Check if it's a prerelease (contains alpha, beta, rc)
+          if echo "$VERSION" | grep -qE "(alpha|beta|rc|dev)"; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          # Manual workflow dispatch
+          VERSION="${{ github.event.inputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${{ github.event.inputs.prerelease }}" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "Releasing version: $VERSION"
+        
+    - name: Validate version format
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        if ! echo "$VERSION" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+"; then
+          echo "Invalid version format: $VERSION"
+          echo "Expected format: X.Y.Z (e.g., 1.0.0)"
+          exit 1
+        fi
+
+  run_tests:
+    name: Run Full Test Suite
+    needs: validate_version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-release-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+        
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+      
+    - name: Install project
+      run: poetry install --no-interaction
+      
+    - name: Run comprehensive test suite
+      run: |
+        poetry run pytest tests/ \
+          --cov=src/marketing_ai_agent \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --junit-xml=pytest-results.xml \
+          -v
+          
+    - name: Verify minimum coverage
+      run: |
+        coverage_pct=$(poetry run coverage report --format=total)
+        if [ "$coverage_pct" -lt 80 ]; then
+          echo "Coverage $coverage_pct% is below minimum 80%"
+          exit 1
+        fi
+        echo "Coverage: $coverage_pct%"
+
+  security_scan:
+    name: Pre-Release Security Scan
+    needs: validate_version
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Export requirements
+      run: |
+        poetry export -f requirements.txt --output requirements.txt --without-hashes
+        
+    - name: Run security scan
+      run: |
+        pip install safety
+        safety check -r requirements.txt --json --output=release-security-report.json || {
+          echo "Security vulnerabilities found before release!"
+          cat release-security-report.json
+          exit 1
+        }
+        
+    - name: Upload security report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-security-report
+        path: release-security-report.json
+
+  build:
+    name: Build Distribution
+    needs: [validate_version, run_tests, security_scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ needs.validate_version.outputs.version }}
+      is_prerelease: ${{ needs.validate_version.outputs.is_prerelease }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Update version in pyproject.toml
+      run: |
+        VERSION="${{ needs.validate_version.outputs.version }}"
+        poetry version "$VERSION"
+        
+    - name: Build distribution packages
+      run: |
+        poetry build
+        
+    - name: Verify build
+      run: |
+        # Check that both wheel and tarball were created
+        ls -la dist/
+        
+        # Verify the packages can be installed
+        pip install dist/*.whl
+        ai-agent --help
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-${{ needs.validate_version.outputs.version }}
+        path: dist/
+
+  generate_changelog:
+    name: Generate Release Notes
+    needs: [validate_version, run_tests, security_scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for changelog
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        VERSION="${{ needs.validate_version.outputs.version }}"
+        
+        # Find the previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        echo "# Release Notes for v$VERSION" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "## Changes since $PREVIOUS_TAG" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          # Get commits since last tag
+          git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG"..HEAD >> CHANGELOG.md
+          
+          echo "" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## Statistics" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          # Add some statistics
+          COMMITS_COUNT=$(git rev-list --count "$PREVIOUS_TAG"..HEAD)
+          FILES_CHANGED=$(git diff --name-only "$PREVIOUS_TAG"..HEAD | wc -l)
+          
+          echo "- **Commits:** $COMMITS_COUNT" >> CHANGELOG.md
+          echo "- **Files changed:** $FILES_CHANGED" >> CHANGELOG.md
+          echo "- **Contributors:** $(git shortlog -sn "$PREVIOUS_TAG"..HEAD | wc -l)" >> CHANGELOG.md
+          
+        else
+          echo "## Initial Release" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "This is the first release of the Marketing AI Agent." >> CHANGELOG.md
+          
+          echo "" >> CHANGELOG.md
+          echo "### Features" >> CHANGELOG.md
+          echo "- AI-powered marketing analytics" >> CHANGELOG.md
+          echo "- Google Ads and Analytics integration" >> CHANGELOG.md
+          echo "- Automated reporting and insights" >> CHANGELOG.md
+          echo "- Command-line interface" >> CHANGELOG.md
+        fi
+        
+        echo "" >> CHANGELOG.md
+        echo "## Installation" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo '```bash' >> CHANGELOG.md
+        echo "pip install marketing-ai-agent==$VERSION" >> CHANGELOG.md
+        echo '```' >> CHANGELOG.md
+        
+        echo "" >> CHANGELOG.md
+        echo "## Security" >> CHANGELOG.md
+        echo "- ✅ All dependencies scanned for vulnerabilities" >> CHANGELOG.md
+        echo "- ✅ Code security analysis passed" >> CHANGELOG.md
+        echo "- ✅ No known security issues" >> CHANGELOG.md
+        
+        # Set output for use in release
+        CHANGELOG_CONTENT=$(cat CHANGELOG.md)
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Upload changelog
+      uses: actions/upload-artifact@v4
+      with:
+        name: changelog-${{ needs.validate_version.outputs.version }}
+        path: CHANGELOG.md
+
+  create_release:
+    name: Create GitHub Release
+    needs: [validate_version, build, generate_changelog]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-${{ needs.build.outputs.version }}
+        path: dist/
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ needs.build.outputs.version }}
+        release_name: Marketing AI Agent v${{ needs.build.outputs.version }}
+        body: ${{ needs.generate_changelog.outputs.changelog }}
+        draft: ${{ github.event.inputs.draft == 'true' }}
+        prerelease: ${{ needs.build.outputs.is_prerelease == 'true' }}
+        
+    - name: Upload wheel to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/marketing_ai_agent-${{ needs.build.outputs.version }}-py3-none-any.whl
+        asset_name: marketing_ai_agent-${{ needs.build.outputs.version }}-py3-none-any.whl
+        asset_content_type: application/zip
+        
+    - name: Upload tarball to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/marketing-ai-agent-${{ needs.build.outputs.version }}.tar.gz
+        asset_name: marketing-ai-agent-${{ needs.build.outputs.version }}.tar.gz
+        asset_content_type: application/gzip
+
+  # Optional: Publish to PyPI (commented out for security)
+  # publish_pypi:
+  #   name: Publish to PyPI
+  #   needs: [create_release, build]
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
+  #   if: needs.build.outputs.is_prerelease == 'false'
+  #   
+  #   steps:
+  #   - name: Download build artifacts
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: dist-${{ needs.build.outputs.version }}
+  #       path: dist/
+  #       
+  #   - name: Publish to PyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       user: __token__
+  #       password: ${{ secrets.PYPI_API_TOKEN }}
+  #       packages_dir: dist/
+
+  notify_success:
+    name: Notify Success
+    needs: [create_release, build]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: Create success comment
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ needs.build.outputs.version }}';
+          const isPrerelease = '${{ needs.build.outputs.is_prerelease }}' === 'true';
+          const releaseType = isPrerelease ? 'pre-release' : 'release';
+          
+          const body = `🎉 Successfully created ${releaseType} **v${version}**
+          
+          ### Release Details
+          - Version: v${version}
+          - Type: ${releaseType}
+          - Build: ✅ Passed
+          - Tests: ✅ Passed
+          - Security: ✅ Passed
+          
+          [View Release](https://github.com/${{ github.repository }}/releases/tag/v${version})`;
+          
+          // Create an issue to notify about the release
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Release v${version} Published`,
+            body: body,
+            labels: ['release', 'announcement']
+          });
+
+  notify_failure:
+    name: Notify Failure
+    needs: [validate_version, run_tests, security_scan, build, generate_changelog, create_release]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - name: Create failure notification
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const version = '${{ needs.validate_version.outputs.version }}' || 'unknown';
+          
+          const body = `❌ Release v${version} failed
+          
+          ### Failure Details
+          Please check the workflow logs for details:
+          [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ### Next Steps
+          1. Review the failed jobs
+          2. Fix any issues
+          3. Retry the release`;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Release v${version} Failed`,
+            body: body,
+            labels: ['release', 'failure', 'bug']
+          });

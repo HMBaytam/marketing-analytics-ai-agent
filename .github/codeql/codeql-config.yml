@@ -1,0 +1,22 @@
+name: "CodeQL Security Analysis"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+  - uses: security-experimental
+
+paths-ignore:
+  - "**/*.md"
+  - "**/docs/**"
+  - "**/tests/fixtures/**"
+  - "**/__pycache__/**"
+  - "**/.*"
+
+paths:
+  - "src/**"
+
+packs:
+  python:
+    - codeql/python-queries
+    - codeql/python-queries:Security

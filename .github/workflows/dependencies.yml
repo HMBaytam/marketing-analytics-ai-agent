@@ -1,0 +1,387 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of update to perform'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - security
+      create_pr:
+        description: 'Create PR for updates'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  POETRY_VERSION: "1.8.3"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  security_updates:
+    name: Security Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event.inputs.update_type == 'security' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Check for vulnerable dependencies
+      id: check_vulns
+      run: |
+        # Export current dependencies
+        poetry export -f requirements.txt --output requirements.txt --without-hashes
+        
+        # Check for vulnerabilities
+        pip install safety
+        if ! safety check -r requirements.txt --json --output vulnerability-report.json; then
+          echo "vulnerabilities_found=true" >> $GITHUB_OUTPUT
+          echo "Vulnerabilities found in dependencies"
+          cat vulnerability-report.json | jq '.[] | .package_name' -r | sort | uniq > vulnerable_packages.txt
+        else
+          echo "vulnerabilities_found=false" >> $GITHUB_OUTPUT
+          echo "No vulnerabilities found"
+        fi
+        
+    - name: Update vulnerable dependencies
+      if: steps.check_vulns.outputs.vulnerabilities_found == 'true'
+      run: |
+        echo "Updating vulnerable packages..."
+        
+        # Read vulnerable packages and update them
+        if [ -f vulnerable_packages.txt ]; then
+          while IFS= read -r package; do
+            if [ -n "$package" ]; then
+              echo "Updating $package..."
+              poetry add "$package@latest" || echo "Failed to update $package"
+            fi
+          done < vulnerable_packages.txt
+        fi
+        
+    - name: Run tests after security updates
+      if: steps.check_vulns.outputs.vulnerabilities_found == 'true'
+      run: |
+        poetry install --no-interaction
+        poetry run pytest tests/ -x --tb=short -q || {
+          echo "Tests failed after security updates"
+          exit 1
+        }
+        
+    - name: Create security update PR
+      if: steps.check_vulns.outputs.vulnerabilities_found == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "security: update vulnerable dependencies"
+        title: "🔒 Security: Update vulnerable dependencies"
+        body: |
+          ## Security Dependency Updates
+          
+          This PR updates dependencies with known security vulnerabilities.
+          
+          ### Updated Packages
+          $(cat vulnerable_packages.txt | sed 's/^/- /')
+          
+          ### Vulnerability Report
+          ```json
+          $(cat vulnerability-report.json)
+          ```
+          
+          **Please review and merge promptly to address security vulnerabilities.**
+        branch: security/dependency-updates
+        delete-branch: true
+        labels: |
+          security
+          dependencies
+          automerge
+
+  dependency_updates:
+    name: Regular Dependency Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.event.inputs.update_type != 'security' || github.event_name == 'schedule'
+    
+    strategy:
+      matrix:
+        update_type: [patch, minor]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-deps-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+        
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+      
+    - name: Install project
+      run: poetry install --no-interaction
+      
+    - name: Check for outdated dependencies
+      id: check_outdated
+      run: |
+        echo "Checking for outdated dependencies..."
+        poetry show --outdated --format=json > outdated.json || echo "[]" > outdated.json
+        
+        if [ "$(cat outdated.json)" != "[]" ] && [ "$(jq length outdated.json)" -gt 0 ]; then
+          echo "outdated_found=true" >> $GITHUB_OUTPUT
+          echo "Found $(jq length outdated.json) outdated packages"
+        else
+          echo "outdated_found=false" >> $GITHUB_OUTPUT
+          echo "No outdated packages found"
+        fi
+        
+    - name: Update dependencies
+      if: steps.check_outdated.outputs.outdated_found == 'true'
+      run: |
+        update_type="${{ matrix.update_type }}"
+        
+        echo "Performing $update_type updates..."
+        
+        case $update_type in
+          "patch")
+            # Update to latest patch versions
+            poetry update --lock
+            ;;
+          "minor")
+            # Update to latest minor versions (be more careful)
+            jq -r '.[] | select(.latest | test("^[0-9]+\\.[0-9]+\\.")) | .name' outdated.json | while read pkg; do
+              current_version=$(poetry show $pkg | grep version | awk '{print $3}')
+              latest_version=$(jq -r ".[] | select(.name == \"$pkg\") | .latest" outdated.json)
+              
+              # Only update if it's a minor version bump
+              if echo "$latest_version" | grep -qE "^$(echo $current_version | cut -d. -f1)\."; then
+                echo "Updating $pkg from $current_version to $latest_version"
+                poetry add "$pkg@^$latest_version" || echo "Failed to update $pkg"
+              fi
+            done
+            ;;
+          "major")
+            # Update to latest major versions (most risky)
+            poetry update
+            ;;
+        esac
+        
+    - name: Run tests after updates
+      if: steps.check_outdated.outputs.outdated_found == 'true'
+      run: |
+        echo "Running tests to verify updates..."
+        poetry run pytest tests/ -x --tb=short -q || {
+          echo "Tests failed after dependency updates"
+          echo "Reverting changes..."
+          git checkout -- poetry.lock pyproject.toml
+          exit 1
+        }
+        
+    - name: Run security check on updated dependencies
+      if: steps.check_outdated.outputs.outdated_found == 'true'
+      run: |
+        echo "Checking updated dependencies for security issues..."
+        poetry export -f requirements.txt --output requirements-updated.txt --without-hashes
+        pip install safety
+        safety check -r requirements-updated.txt || {
+          echo "Security issues found in updated dependencies"
+          exit 1
+        }
+        
+    - name: Generate update summary
+      if: steps.check_outdated.outputs.outdated_found == 'true'
+      run: |
+        echo "# Dependency Updates Summary" > update-summary.md
+        echo "" >> update-summary.md
+        echo "## Update Type: ${{ matrix.update_type }}" >> update-summary.md
+        echo "" >> update-summary.md
+        
+        if [ -f outdated.json ] && [ "$(cat outdated.json)" != "[]" ]; then
+          echo "## Updated Packages" >> update-summary.md
+          echo "" >> update-summary.md
+          jq -r '.[] | "- \(.name): \(.version) → \(.latest)"' outdated.json >> update-summary.md
+          echo "" >> update-summary.md
+        fi
+        
+        echo "## Changes" >> update-summary.md
+        echo "- All tests passing ✅" >> update-summary.md
+        echo "- No security vulnerabilities detected ✅" >> update-summary.md
+        echo "- Dependencies updated successfully ✅" >> update-summary.md
+        
+    - name: Create dependency update PR
+      if: steps.check_outdated.outputs.outdated_found == 'true' && (github.event.inputs.create_pr != 'false')
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "deps: ${{ matrix.update_type }} dependency updates"
+        title: "📦 Dependencies: ${{ matrix.update_type }} updates"
+        body-path: update-summary.md
+        branch: deps/${{ matrix.update_type }}-updates
+        delete-branch: true
+        labels: |
+          dependencies
+          ${{ matrix.update_type }}-update
+
+  major_updates:
+    name: Major Version Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event.inputs.update_type == 'major'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-major-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+        
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+      
+    - name: Install project
+      run: poetry install --no-interaction
+      
+    - name: Update to latest major versions
+      run: |
+        echo "Updating to latest major versions..."
+        poetry update
+        
+    - name: Run comprehensive tests
+      run: |
+        echo "Running comprehensive test suite..."
+        poetry run pytest tests/ --cov=src/marketing_ai_agent --cov-report=term-missing -v || {
+          echo "Tests failed after major updates"
+          git checkout -- poetry.lock pyproject.toml
+          exit 1
+        }
+        
+    - name: Run security and compatibility checks
+      run: |
+        # Check for security issues
+        poetry export -f requirements.txt --output requirements-major.txt --without-hashes
+        pip install safety
+        safety check -r requirements-major.txt
+        
+        # Check for license compatibility
+        pip install pip-licenses
+        pip install -r requirements-major.txt
+        pip-licenses --format=plain --with-license-file | grep -iE "(GPL|AGPL|LGPL)" && {
+          echo "WARNING: Found copyleft licenses after major updates"
+          exit 1
+        } || echo "License compatibility check passed"
+        
+    - name: Create major update PR with detailed review
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "deps: major version updates - requires review"
+        title: "⚠️ MAJOR: Dependency updates requiring review"
+        body: |
+          ## ⚠️ Major Dependency Updates
+          
+          **This PR contains major version updates that may include breaking changes.**
+          
+          ### 🔍 Review Checklist
+          - [ ] All tests are passing
+          - [ ] No new security vulnerabilities
+          - [ ] License compatibility maintained
+          - [ ] Breaking changes documented
+          - [ ] Migration steps identified (if any)
+          
+          ### 📋 Updated Packages
+          See the diff for all updated packages.
+          
+          ### ⚠️ Potential Breaking Changes
+          Major version updates may include:
+          - API changes
+          - Deprecated feature removal
+          - Behavior modifications
+          - New dependencies
+          
+          **Please thoroughly test this update before merging.**
+        branch: deps/major-updates
+        delete-branch: true
+        labels: |
+          dependencies
+          major-update
+          breaking-change
+          review-required
+        draft: true
