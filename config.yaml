@@ -1,0 +1,29 @@
+# Marketing AI Agent Configuration
+api:
+  google_ads:
+    client_id: "your-client-id"
+    client_secret: "your-client-secret" 
+    refresh_token: "your-refresh-token"
+    developer_token: "your-developer-token"
+  
+  google_analytics:
+    property_id: "your-property-id"
+    credentials_file: "path/to/credentials.json"
+
+output:
+  base_directory: "./reports"
+  format: "markdown"
+  include_charts: true
+
+logging:
+  level: "INFO"
+  file: "./logs/agent.log"
+
+optimization:
+  confidence_threshold: 0.7
+  max_recommendations: 10
+  include_experimental: true
+
+analytics:
+  default_date_range: "30d"
+  significance_threshold: 0.05

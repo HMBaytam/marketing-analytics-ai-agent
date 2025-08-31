@@ -1,0 +1,61 @@
+# Google Analytics 4 API Configuration Example
+# This is an example configuration file for Google Analytics 4 API
+# Copy this to your actual configuration location and update with your credentials
+
+google_analytics:
+  # GA4 Property ID (found in GA4 Admin > Property Settings)
+  property_id: "123456789"
+  
+  # Option 1: OAuth2 credentials (recommended for interactive use)
+  oauth2:
+    client_id: "your_client_id_here.apps.googleusercontent.com"
+    client_secret: "your_client_secret_here"
+    refresh_token: "your_refresh_token_here"
+  
+  # Option 2: Service Account credentials (recommended for server applications)
+  service_account:
+    credentials_path: "config/secrets/ga4-service-account.json"
+  
+  # Rate limiting
+  requests_per_minute: 60
+
+# Setup instructions:
+
+# Option 1 - OAuth2 Setup:
+# 1. Go to Google Cloud Console: https://console.cloud.google.com/
+# 2. Create a new project or select existing one
+# 3. Enable Google Analytics Data API
+# 4. Create OAuth2 credentials (Web application type)
+# 5. Add authorized redirect URI: http://localhost:8080
+# 6. Run OAuth flow to get refresh token
+# 7. Make sure your Google account has access to the GA4 property
+
+# Option 2 - Service Account Setup:
+# 1. Go to Google Cloud Console: https://console.cloud.google.com/
+# 2. Create a new project or select existing one
+# 3. Enable Google Analytics Data API
+# 4. Create a service account
+# 5. Download the service account key file (JSON)
+# 6. In GA4 Admin, add the service account email as a user with Viewer permissions
+# 7. Save the JSON file securely and update the credentials_path
+
+# Common dimensions and metrics:
+dimensions:
+  - "date"
+  - "country"
+  - "deviceCategory" 
+  - "firstUserDefaultChannelGrouping"
+  - "firstUserSource"
+  - "firstUserMedium"
+  - "eventName"
+
+metrics:
+  - "sessions"
+  - "users" 
+  - "newUsers"
+  - "pageviews"
+  - "bounceRate"
+  - "averageSessionDuration"
+  - "conversions"
+  - "totalRevenue"
+  - "engagementRate"

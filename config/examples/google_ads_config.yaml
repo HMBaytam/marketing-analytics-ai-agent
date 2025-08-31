@@ -1,0 +1,31 @@
+# Google Ads API Configuration Example
+# This is an example configuration file for Google Ads API
+# Copy this to your actual configuration location and update with your credentials
+
+google_ads:
+  # Developer token from Google Ads API Center
+  developer_token: "your_developer_token_here"
+  
+  # OAuth2 credentials
+  client_id: "your_client_id_here.apps.googleusercontent.com"
+  client_secret: "your_client_secret_here"
+  refresh_token: "your_refresh_token_here"
+  
+  # Customer IDs (remove leading zeros)
+  customer_id: "1234567890"  # Target customer account
+  login_customer_id: "9876543210"  # Manager account (optional)
+  
+  # API settings
+  use_proto_plus: true
+  
+  # Rate limiting
+  requests_per_minute: 60
+
+# Authentication setup instructions:
+# 1. Go to Google Cloud Console: https://console.cloud.google.com/
+# 2. Create a new project or select existing one
+# 3. Enable Google Ads API
+# 4. Create OAuth2 credentials (Web application type)
+# 5. Add authorized redirect URI: http://localhost:8080
+# 6. Get developer token from Google Ads API Center
+# 7. Run OAuth flow to get refresh token
